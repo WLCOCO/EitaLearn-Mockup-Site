@@ -1,0 +1,183 @@
+<!--
+=============================================================================
+STUDENT SUBJECT DETAIL - Deep dive into a single subject
+=============================================================================
+PURPOSE: When a student clicks on a subject they're struggling with, they
+         land here. This page provides:
+         1. AI-generated summary and feedback
+         2. Topic-by-topic breakdown with mastery levels
+         3. Specific, actionable recommendations for improvement
+         4. Links to personalized practice pathways
+
+WHY: The Student journey says "Hopes that the feedback will be clear and 
+     tells you how to fix it." This page delivers exactly that — clear 
+     feedback with specific next steps.
+
+TODO: Add interactive skill tree visualization
+TODO: Add video explanations for each topic
+TODO: Add peer comparison (opt-in) for motivation
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}{{ subject_data.name }} - Detail - EitaLearn{% endblock %}
+{% block body_class %}student-view{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Subject Header -->
+    <div class="subject-header" style="border-color: {{ subject_data.color }};">
+        <div class="subject-header-left">
+            <a href="{{ url_for('student_dashboard') }}" class="back-link">← Back to Dashboard</a>
+            <h1>{{ subject_data.icon }} {{ subject_data.name }}</h1>
+            <div class="subject-score-big">
+                <span class="big-score" style="color: {{ subject_data.color }};">{{ subject_data.overall }}%</span>
+                <span class="big-score-label">Overall Score</span>
+            </div>
+        </div>
+        <div class="subject-header-actions">
+            <a href="{{ url_for('student_test', subject_key=subject_key) }}" class="btn btn-primary">
+                📝 Take Diagnostic Test
+            </a>
+        </div>
+    </div>
+
+    <!-- 
+    AI ANALYSIS SUMMARY
+    The "AI" has analyzed the student's performance and written a summary.
+    In production, this would come from a real language model.
+    WHY: Students need a human-readable explanation, not just numbers.
+    -->
+    <section class="section ai-analysis">
+        <div class="ai-badge">🤖 AI Analysis</div>
+        <div class="ai-summary-box">
+            <p class="ai-summary-text">{{ subject_data.ai_summary }}</p>
+            <p class="ai-generated-note">
+                <em>This analysis was generated on {{ report.generated_at }} based on your latest assessment data.</em>
+            </p>
+        </div>
+    </section>
+
+    <!-- 
+    STRENGTHS, GROWTH AREAS, AND WEAKNESSES
+    Color-coded sections so students can quickly see what's good and what needs work
+    -->
+    <section class="section">
+        <h2 class="section-title">📋 Performance Summary</h2>
+
+        <div class="performance-columns">
+            <!-- Strengths Column -->
+            {% if subject_data.strengths %}
+            <div class="perf-column perf-strengths">
+                <h3>💪 Strengths</h3>
+                <ul>
+                    {% for s in subject_data.strengths %}
+                    <li>{{ s }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Growth Areas Column -->
+            {% if subject_data.growth_areas %}
+            <div class="perf-column perf-growth">
+                <h3>🌱 Growing</h3>
+                <ul>
+                    {% for g in subject_data.growth_areas %}
+                    <li>{{ g }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Weaknesses Column -->
+            {% if subject_data.weaknesses %}
+            <div class="perf-column perf-weaknesses">
+                <h3>🎯 Focus Areas</h3>
+                <ul>
+                    {% for w in subject_data.weaknesses %}
+                    <li>{{ w }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- 
+    TOPIC-BY-TOPIC BREAKDOWN
+    Detailed view of each topic within the subject.
+    Each topic shows: score, mastery level, trend, and AI recommendation.
+    WHY: Students need specific, targeted feedback — not just "do better."
+    -->
+    <section class="section">
+        <h2 class="section-title">📊 Topic Breakdown</h2>
+        <p class="section-desc">Each topic is analyzed individually. Click "Start Pathway" to begin a personalized
+            learning plan.</p>
+
+        <div class="topic-detail-list">
+            {% for topic_detail in subject_data.topic_details|sort(attribute='score') %}
+            <div class="topic-detail-card">
+                <div class="topic-detail-header">
+                    <div class="topic-detail-info">
+                        <h3>{{ topic_detail.topic }}</h3>
+                        <div class="topic-meta">
+                            <span class="mastery-badge"
+                                style="background-color: {{ topic_detail.mastery_label[1] }}20; color: {{ topic_detail.mastery_label[1] }}; border: 1px solid {{ topic_detail.mastery_label[1] }};">
+                                {{ topic_detail.mastery_label[0] }}
+                            </span>
+                            {% if topic_detail.trend == 'up' %}
+                            <span class="trend-badge trend-up">↑ Improving</span>
+                            {% elif topic_detail.trend == 'down' %}
+                            <span class="trend-badge trend-down">↓ Declining</span>
+                            {% else %}
+                            <span class="trend-badge trend-flat">→ Steady</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="topic-detail-score">
+                        <span class="score-big" style="color: {{ topic_detail.mastery_label[1] }};">{{
+                            topic_detail.score }}%</span>
+                    </div>
+                </div>
+
+                <!-- Score Bar -->
+                <div class="score-bar-container">
+                    <div class="score-bar">
+                        <div class="score-bar-fill"
+                            style="width: {{ topic_detail.score }}%; background-color: {{ topic_detail.mastery_label[1] }};">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation for this specific topic -->
+                <div class="topic-recommendation">
+                    <div class="rec-header">
+                        <strong>{{ topic_detail.recommendation.message }}</strong>
+                    </div>
+                    <p>{{ topic_detail.recommendation.detail }}</p>
+
+                    <div class="rec-actions">
+                        <h4>Recommended Next Steps:</h4>
+                        <ol>
+                            {% for action in topic_detail.recommendation.actions %}
+                            <li>{{ action }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="topic-detail-actions">
+                    <a href="{{ url_for('student_pathway', subject_key=subject_key, topic=topic_detail.topic) }}"
+                        class="btn btn-primary">🛤️ Start Pathway</a>
+                    <a href="{{ url_for('student_test', subject_key=subject_key) }}" class="btn btn-outline">📝 Practice
+                        Test</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

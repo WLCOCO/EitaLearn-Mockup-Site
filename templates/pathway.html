@@ -1,0 +1,352 @@
+<!--
+=============================================================================
+PATHWAY PAGE - Personalized Learning Path for a Topic
+=============================================================================
+PURPOSE: Shows the step-by-step personalized curriculum for a specific topic.
+         This is the "fully personalized curriculum" the platform creates.
+
+EACH PATHWAY STEP INCLUDES:
+  - Type (lesson, video, practice, quiz, challenge)
+  - Description of what the AI would generate
+  - Duration estimate
+  - Lock/unlock status (progressive learning)
+
+WHY: This solves the Student pain point of "Doesn't fit difficulty level, 
+     too repetitive, not engaging." The pathway is tailored to the student's
+     current mastery level and includes varied activity types.
+
+TODO: Fill in real lesson content (videos, interactive exercises)
+TODO: Add adaptive difficulty that adjusts as student progresses
+TODO: Track completion and update student scores
+TODO: Add gamification elements (badges, XP, streaks)
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}{{ topic }} Pathway - EitaLearn{% endblock %}
+{% block body_class %}student-view pathway-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Pathway Header -->
+    <div class="pathway-header">
+        <a href="{{ url_for('student_subject_detail', subject_key=subject_key) }}" class="back-link">← Back to {{
+            subject.name }}</a>
+        <h1>🛤️ Your Personalized Pathway</h1>
+        <h2 style="color: {{ subject.color }};">{{ subject.icon }} {{ topic }}</h2>
+
+        <div class="pathway-meta-info">
+            <div class="meta-item">
+                <strong>Current Level:</strong>
+                <span class="mastery-badge"
+                    style="background-color: {{ mastery_label[1] }}20; color: {{ mastery_label[1] }};">
+                    {{ mastery_label[0] }}
+                </span>
+            </div>
+            <div class="meta-item">
+                <strong>Current Score:</strong> {{ topic_data.get('score', 'N/A') }}%
+            </div>
+            <div class="meta-item">
+                <strong>Steps:</strong> {{ pathway_steps|length }} activities
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Overview of the Pathway -->
+    <section class="section ai-pathway-overview">
+        <div class="ai-badge">🤖 AI-Designed Pathway</div>
+        <div class="ai-summary-box">
+            <p>{{ recommendation.detail }}</p>
+            <div class="rec-actions">
+                <h4>Your learning goals for this pathway:</h4>
+                <ol>
+                    {% for action in recommendation.actions %}
+                    <li>{{ action }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- 
+    PATHWAY STEPS
+    A vertical timeline of learning activities.
+    Steps are sequential — some are locked until previous steps are complete.
+    
+    WHY: Structured, progressive learning prevents students from skipping
+    foundations while keeping the path engaging with varied activity types.
+    -->
+    <section class="section">
+        <h2 class="section-title">📚 Learning Steps</h2>
+
+        <div class="pathway-timeline">
+            {% for step in pathway_steps %}
+            <div class="timeline-step {% if step.status == 'locked' %}step-locked{% else %}step-available{% endif %}">
+                <div class="timeline-marker">
+                    <span class="step-icon">{{ step.icon }}</span>
+                    <span class="step-number">{{ step.step }}</span>
+                </div>
+
+                <div class="timeline-content">
+                    <div class="step-header">
+                        <h3>{{ step.title }}</h3>
+                        <div class="step-meta">
+                            <span class="step-type type-{{ step.type }}">{{ step.type|title }}</span>
+                            <span class="step-duration">⏱️ {{ step.duration }}</span>
+                            {% if step.status == 'locked' %}
+                            <span class="step-status locked">🔒 Complete previous step first</span>
+                            {% else %}
+                            <span class="step-status available">✅ Available</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <p class="step-description">{{ step.description }}</p>
+
+                    {% if step.status != 'locked' %}
+                    <button class="btn btn-primary btn-sm"
+                        onclick="startStep({{ step.step }}, '{{ step.type }}', '{{ step.title }}')">
+                        {% if step.type == 'lesson' %}📖 Start Lesson
+                        {% elif step.type == 'video' %}▶️ Watch Video
+                        {% elif step.type == 'practice' %}✏️ Start Practice
+                        {% elif step.type == 'interactive' %}🎮 Launch Activity
+                        {% elif step.type == 'quiz' %}📝 Take Quiz
+                        {% elif step.type == 'challenge' %}🏆 Accept Challenge
+                        {% elif step.type == 'prerequisite' %}🔧 Review Prerequisites
+                        {% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- 
+MODAL - Simulates starting a pathway step
+Since this is a mock, clicking a step button shows a modal explaining 
+what the AI would do in a real implementation.
+-->
+<div class="modal-overlay" id="step-modal" style="display: none;">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <div id="modal-body">
+            <!-- Filled dynamically by JavaScript -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * PATHWAY STEP INTERACTION
+     * When a student clicks a step button, this shows a modal with a simulation
+     * of what the AI would generate for that step type.
+     * 
+     * In a real implementation, these would link to actual lesson content,
+     * video players, and interactive exercise engines.
+     * 
+     * TODO: Replace with actual lesson rendering engine
+     * TODO: Add real video player integration
+     * TODO: Build interactive exercise framework
+     */
+
+    function startStep(stepNum, type, title) {
+        const modal = document.getElementById('step-modal');
+        const body = document.getElementById('modal-body');
+
+        let content = '';
+
+        // Generate mock content based on step type
+        switch (type) {
+            case 'lesson':
+            case 'prerequisite':
+                content = `
+                <h2>📖 ${title}</h2>
+                <div class="mock-lesson">
+                    <div class="ai-badge">🤖 AI-Generated Lesson Content</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Generate a lesson tailored to the student's current level</li>
+                        <li>Use examples based on the student's previous correct answers</li>
+                        <li>Build on concepts the student already understands</li>
+                        <li>Include visual aids and step-by-step walkthroughs</li>
+                    </ul>
+                    <div class="mock-content-placeholder">
+                        <h3>Example Lesson Content:</h3>
+                        <p>The AI would generate a multi-page interactive lesson here with:</p>
+                        <ol>
+                            <li><strong>Introduction</strong> — Connect to what you already know</li>
+                            <li><strong>Core Concept</strong> — Clear explanation with visuals</li>
+                            <li><strong>Worked Examples</strong> — Step-by-step problem solving</li>
+                            <li><strong>Try It</strong> — Guided practice with hints</li>
+                            <li><strong>Summary</strong> — Key takeaways and vocabulary</li>
+                        </ol>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Mark as Complete</button>
+                </div>
+            `;
+                break;
+
+            case 'video':
+                content = `
+                <h2>🎥 ${title}</h2>
+                <div class="mock-video">
+                    <div class="ai-badge">🤖 AI-Selected Video</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Select an instructional video matched to the student's learning style</li>
+                        <li>Choose appropriate difficulty level</li>
+                        <li>Add interactive checkpoints during the video</li>
+                        <li>Generate comprehension questions after viewing</li>
+                    </ul>
+                    <div class="video-placeholder">
+                        <div class="play-button">▶</div>
+                        <p>Video Player Would Appear Here</p>
+                        <p class="video-note">The AI would select from a library of instructional videos, choosing the one best matched to this student's level and learning style.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Mark as Complete</button>
+                </div>
+            `;
+                break;
+
+            case 'practice':
+                content = `
+                <h2>✏️ ${title}</h2>
+                <div class="mock-practice">
+                    <div class="ai-badge">🤖 AI-Generated Practice</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Generate practice problems at the student's current level</li>
+                        <li>Adaptive difficulty — gets harder as student succeeds, easier if struggling</li>
+                        <li>Provide hints on request (scaffold learning)</li>
+                        <li>Show worked solutions for incorrect answers</li>
+                        <li>Track which specific sub-skills need more practice</li>
+                    </ul>
+                    <div class="mock-content-placeholder">
+                        <h3>Sample Practice Problem:</h3>
+                        <p class="sample-question">The AI would generate a problem here based on your specific weak areas, starting at an appropriate difficulty level.</p>
+                        <div class="hint-box">
+                            <strong>💡 Hint System:</strong> Students can request hints that gradually reveal the solution approach without giving the answer.
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Mark as Complete</button>
+                </div>
+            `;
+                break;
+
+            case 'interactive':
+                content = `
+                <h2>🎮 ${title}</h2>
+                <div class="mock-interactive">
+                    <div class="ai-badge">🤖 AI-Created Activity</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Create an engaging, game-like activity for the topic</li>
+                        <li>Apply concepts to real-world scenarios</li>
+                        <li>Include drag-and-drop, sorting, matching activities</li>
+                        <li>Make learning fun while reinforcing key concepts</li>
+                    </ul>
+                    <div class="interactive-placeholder">
+                        <p>🎮 Interactive Activity Would Load Here</p>
+                        <p>Examples: Virtual manipulatives, simulations, real-world problem scenarios</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Mark as Complete</button>
+                </div>
+            `;
+                break;
+
+            case 'quiz':
+                content = `
+                <h2>📝 ${title}</h2>
+                <div class="mock-quiz">
+                    <div class="ai-badge">🤖 AI-Adaptive Quiz</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Generate a short quiz (5-8 questions) based on what was covered</li>
+                        <li>Adapt difficulty based on this specific student's performance</li>
+                        <li>Only test concepts that were practiced in previous steps</li>
+                        <li>Determine if student is ready to move on or needs more practice</li>
+                    </ul>
+                    <div class="mock-content-placeholder">
+                        <p>The mini-quiz would appear here, testing understanding of the concepts covered in the previous steps.</p>
+                        <p><strong>Passing threshold:</strong> 80% to unlock the next step.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Mark as Complete</button>
+                </div>
+            `;
+                break;
+
+            case 'challenge':
+                content = `
+                <h2>🏆 ${title}</h2>
+                <div class="mock-challenge">
+                    <div class="ai-badge">🤖 AI Challenge Problem</div>
+                    <p><strong>What the AI would do here:</strong></p>
+                    <ul>
+                        <li>Present challenging problems that combine multiple skills</li>
+                        <li>Test deep understanding, not just rote memorization</li>
+                        <li>Include open-ended and multi-step problems</li>
+                        <li>Award badges/achievements for successful completion</li>
+                    </ul>
+                    <div class="mock-content-placeholder">
+                        <p>The challenge would present a complex, multi-step problem requiring application of all concepts learned in this pathway.</p>
+                        <p>🏅 <strong>Reward:</strong> Badge + pathway completion + updated mastery score</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="completeStep(${stepNum})">✅ Complete Pathway!</button>
+                </div>
+            `;
+                break;
+        }
+
+        body.innerHTML = content;
+        modal.style.display = 'flex';
+    }
+
+    function completeStep(stepNum) {
+        // In a real app, this would:
+        // 1. Save completion to database
+        // 2. Update student's progress
+        // 3. Unlock the next step
+        // 4. Recalculate mastery scores
+
+        closeModal();
+
+        // Visual feedback: mark step as complete
+        const step = document.querySelectorAll('.timeline-step')[stepNum - 1];
+        if (step) {
+            step.classList.remove('step-available');
+            step.classList.add('step-completed');
+
+            // Unlock next step
+            const nextStep = document.querySelectorAll('.timeline-step')[stepNum];
+            if (nextStep && nextStep.classList.contains('step-locked')) {
+                nextStep.classList.remove('step-locked');
+                nextStep.classList.add('step-available');
+                // Add button to newly unlocked step
+                const btn = nextStep.querySelector('.step-status');
+                if (btn) {
+                    btn.textContent = '✅ Available';
+                    btn.classList.remove('locked');
+                    btn.classList.add('available');
+                }
+            }
+        }
+
+        alert('Step completed! In a real system, this would update your progress and mastery scores.');
+    }
+
+    function closeModal() {
+        document.getElementById('step-modal').style.display = 'none';
+    }
+
+    // Close modal on outside click
+    document.getElementById('step-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+{% endblock %}

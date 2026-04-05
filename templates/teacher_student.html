@@ -1,0 +1,278 @@
+<!--
+=============================================================================
+TEACHER - INDIVIDUAL STUDENT DETAIL VIEW
+=============================================================================
+PURPOSE: When a teacher clicks on a student, they see a full profile with:
+  1. Complete AI-generated performance analysis
+  2. Per-subject, per-topic breakdown
+  3. Active learning pathways with progress tracking
+  4. Assessment history and score trends
+  5. Ability to assign new pathways
+
+WHY: Teacher journey says "Teachers able to view all steps of pathways,
+     track as student completes" and wants to see "important stats."
+
+TODO: Add notes/comments feature for teachers
+TODO: Add parent communication integration
+TODO: Add comparison to class average
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}{{ student.name }} - Teacher View - EitaLearn{% endblock %}
+{% block body_class %}teacher-view{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Student Profile Header -->
+    <div class="student-profile-header">
+        <a href="{{ url_for('teacher_dashboard') }}" class="back-link">← Back to Dashboard</a>
+
+        <div class="profile-info">
+            <div class="profile-avatar">{{ student.name[0] }}</div>
+            <div class="profile-details">
+                <h1>{{ student.name }}</h1>
+                <p>{{ student.grade }} · {{ student['class'] }}</p>
+            </div>
+            <div
+                class="profile-score {% if student.overall_score >= 75 %}score-good{% elif student.overall_score >= 50 %}score-ok{% else %}score-low{% endif %}">
+                <span class="score-number">{{ student.overall_score }}%</span>
+                <span class="score-label">Overall</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Report Summary -->
+    {% if report %}
+    <section class="section ai-analysis">
+        <div class="ai-badge">🤖 AI Student Analysis</div>
+        <div class="ai-summary-box">
+            <p class="ai-timestamp">Generated: {{ report.generated_at }}</p>
+            {% for subj_key, subj_data in report.subjects.items() %}
+            <div class="ai-subject-summary">
+                <h3>{{ subj_data.icon }} {{ subj_data.name }}</h3>
+                <p>{{ subj_data.ai_summary }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Subject Performance Cards -->
+    <section class="section">
+        <h2 class="section-title">📊 Performance by Subject</h2>
+
+        <div class="teacher-subject-grid">
+            {% for subj_key, subj_data in student.subjects.items() %}
+            <div class="teacher-subject-card">
+                <div class="tsc-header"
+                    style="background-color: {{ subjects[subj_key].color }}15; border-bottom: 3px solid {{ subjects[subj_key].color }};">
+                    <span class="tsc-icon">{{ subjects[subj_key].icon }}</span>
+                    <h3>{{ subjects[subj_key].name }}</h3>
+                    <span class="tsc-score" style="color: {{ subjects[subj_key].color }};">{{ subj_data.overall
+                        }}%</span>
+                </div>
+
+                <div class="tsc-topics">
+                    {% for topic, tdata in subj_data.topics.items()|sort(attribute='1.score') %}
+                    <div class="tsc-topic-row">
+                        <span class="tsc-topic-name">{{ topic }}</span>
+                        <div class="tsc-topic-bar">
+                            <div class="score-bar">
+                                <div class="score-bar-fill"
+                                    style="width: {{ tdata.score }}%; background-color: {{ get_mastery_label(tdata.mastery)[1] }};">
+                                </div>
+                            </div>
+                        </div>
+                        <span class="tsc-topic-score">{{ tdata.score }}%</span>
+                        <span class="mastery-dot" style="background-color: {{ get_mastery_label(tdata.mastery)[1] }};"
+                            title="{{ get_mastery_label(tdata.mastery)[0] }}"></span>
+                        {% if tdata.trend == 'up' %}
+                        <span class="trend-icon trend-up">↑</span>
+                        {% elif tdata.trend == 'down' %}
+                        <span class="trend-icon trend-down">↓</span>
+                        {% else %}
+                        <span class="trend-icon trend-flat">→</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Active Pathways -->
+    <section class="section">
+        <h2 class="section-title">🛤️ Active Learning Pathways</h2>
+        <p class="section-desc">Track which pathways are assigned and the student's progress through each one.</p>
+
+        {% if student.pathways %}
+        <div class="pathway-list">
+            {% for pw in student.pathways %}
+            <div class="pathway-card">
+                <div class="pathway-info">
+                    <span class="pathway-subject-icon">{{ subjects[pw.subject].icon }}</span>
+                    <div>
+                        <h4>{{ pw.topic }}</h4>
+                        <p class="pathway-meta">
+                            {{ subjects[pw.subject].name }} ·
+                            Assigned by: {{ pw.assigned_by }} ·
+                            Status: <span class="status-{{ pw.status }}">{{ pw.status|replace('_', ' ')|title }}</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="pathway-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ pw.progress }}%;"></div>
+                    </div>
+                    <span class="progress-text">{{ pw.progress }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No active pathways. Consider assigning one based on the AI recommendations above.</p>
+        </div>
+        {% endif %}
+
+        <button class="btn btn-primary" onclick="openAssignModalForStudent()">➕ Assign New Pathway</button>
+    </section>
+
+    <!-- Assessment History Chart -->
+    {% if student.assessment_history %}
+    <section class="section">
+        <h2 class="section-title">📈 Score Trends Over Time</h2>
+        <p class="section-desc">Assessment history shows how this student's scores have changed. Look for upward trends
+            to confirm pathways are working.</p>
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+    </section>
+    {% endif %}
+</div>
+
+<!-- Assign Pathway Modal -->
+<div class="modal-overlay" id="assign-modal" style="display:none;">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <h2>Assign Pathway to {{ student.name }}</h2>
+        <form id="assign-form">
+            <input type="hidden" id="assign-student-id" value="{{ student_id }}">
+            <div class="form-group">
+                <label>Subject</label>
+                <select id="assign-subject" class="form-select">
+                    {% for key, subj in subjects.items() %}
+                    <option value="{{ key }}">{{ subj.icon }} {{ subj.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Topic</label>
+                <select id="assign-topic" class="form-select"></select>
+            </div>
+            <button type="submit" class="btn btn-primary">Assign Pathway</button>
+        </form>
+        <div id="assign-result" style="display:none;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * ASSESSMENT HISTORY CHART
+     * Line chart showing score trends over time, grouped by subject.
+     * Helps teachers see if interventions/pathways are working.
+     */
+    const history = {{ student.assessment_history| tojson }};
+    const subjectColors = {{ subject_colors| tojson }};
+    const subjectNames = {{ subject_names| tojson }};
+
+    // Group history by subject
+    const grouped = {};
+    history.forEach(h => {
+        if (!grouped[h.subject]) grouped[h.subject] = [];
+        grouped[h.subject].push(h);
+    });
+
+    const datasets = Object.entries(grouped).map(([subj, entries]) => ({
+        label: subjectNames[subj] || subj,
+        data: entries.map(e => ({ x: e.date, y: e.score })),
+        borderColor: subjectColors[subj] || '#666',
+        backgroundColor: (subjectColors[subj] || '#666') + '20',
+        tension: 0.3,
+        fill: true
+    }));
+
+    // Get all unique dates for x-axis
+    const allDates = [...new Set(history.map(h => h.date))].sort();
+
+    new Chart(document.getElementById('historyChart'), {
+        type: 'line',
+        data: {
+            labels: allDates,
+            datasets: datasets.map(ds => ({
+                ...ds,
+                data: allDates.map(date => {
+                    const entry = ds.data.find(d => d.x === date);
+                    return entry ? entry.y : null;
+                })
+            }))
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Assessment Score Trends' }
+            },
+            scales: {
+                y: { beginAtZero: false, min: 0, max: 100, title: { display: true, text: 'Score (%)' } }
+            }
+        }
+    });
+
+    /**
+     * PATHWAY ASSIGNMENT
+     */
+    const subjectTopics = {{ subject_topics| tojson }};
+
+    document.getElementById('assign-subject').addEventListener('change', function () {
+        const topicSelect = document.getElementById('assign-topic');
+        topicSelect.innerHTML = '';
+        (subjectTopics[this.value] || []).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.textContent = t;
+            topicSelect.appendChild(opt);
+        });
+    });
+    document.getElementById('assign-subject').dispatchEvent(new Event('change'));
+
+    document.getElementById('assign-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch('/teacher/assign-pathway', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                student_id: parseInt(document.getElementById('assign-student-id').value),
+                subject: document.getElementById('assign-subject').value,
+                topic: document.getElementById('assign-topic').value
+            })
+        })
+            .then(r => r.json())
+            .then(result => {
+                const div = document.getElementById('assign-result');
+                div.style.display = 'block';
+                div.innerHTML = `<div class="alert alert-success">✅ ${result.message}<br><em>${result.ai_note}</em></div>`;
+            });
+    });
+
+    function openAssignModalForStudent() {
+        document.getElementById('assign-modal').style.display = 'flex';
+    }
+    function closeModal() {
+        document.getElementById('assign-modal').style.display = 'none';
+    }
+</script>
+{% endblock %}

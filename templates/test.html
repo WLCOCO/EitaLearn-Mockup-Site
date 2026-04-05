@@ -1,0 +1,225 @@
+<!--
+=============================================================================
+PRACTICE TEST PAGE - Interactive Diagnostic Assessment
+=============================================================================
+PURPOSE: Students take a diagnostic test here. Questions are presented for
+         a single subject, and upon submission, the answers are analyzed by
+         the "AI" to generate personalized recommendations.
+
+HOW IT WORKS:
+  1. Questions are displayed with multiple-choice options
+  2. Student selects answers and submits
+  3. Server scores the test and analyzes per-topic performance
+  4. Results page shows detailed feedback and new pathways
+
+WHY: This is the FIRST step in the adaptive learning cycle:
+     Test → Analyze → Identify challenges → Recommend → Personalize
+
+TODO: Make the test truly adaptive (change difficulty based on answers)
+TODO: Add question types: drag-and-drop, fill-in-the-blank, matching
+TODO: Add a timer option for timed assessments
+TODO: Randomize question order to prevent cheating
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}{{ subject.name }} - Diagnostic Test - EitaLearn{% endblock %}
+{% block body_class %}student-view test-page{% endblock %}
+
+{% block content %}
+<div class="test-container">
+
+    <!-- Test Header -->
+    <div class="test-header">
+        <div class="test-header-info">
+            <a href="{{ url_for('student_dashboard') }}" class="back-link">← Back to Dashboard</a>
+            <h1>{{ subject.icon }} {{ subject.name }} - Diagnostic Assessment</h1>
+            <p class="test-description">
+                Answer each question to the best of your ability. This assessment will help the AI
+                understand your strengths and areas for growth, then create a personalized learning
+                path just for you.
+            </p>
+        </div>
+
+        <!-- Progress indicator -->
+        <div class="test-progress">
+            <span id="progress-text">Question 1 of {{ questions|length }}</span>
+            <div class="progress-bar">
+                <div class="progress-fill" id="test-progress-bar"
+                    style="width: {{ (1/questions|length * 100)|round }}%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Form - All questions -->
+    <form method="POST" action="{{ url_for('submit_test', subject_key=subject_key) }}" id="test-form">
+
+        {% for q in questions %}
+        <!-- 
+        Individual Question Card
+        Each question belongs to a specific topic and has a difficulty level.
+        The AI uses the topic + correctness to determine per-topic mastery.
+        -->
+        <div class="question-card" id="question-{{ loop.index }}" {% if not loop.first %}style="display: none;" {% endif
+            %}>
+
+            <div class="question-header">
+                <span class="question-number">Question {{ loop.index }} of {{ questions|length }}</span>
+                <span class="question-topic">{{ q.topic }}</span>
+                <span class="question-difficulty difficulty-{{ q.difficulty }}">{{ q.difficulty|title }}</span>
+            </div>
+
+            <div class="question-text">
+                <p>{{ q.question }}</p>
+            </div>
+
+            <!-- 
+            Answer Options
+            Radio buttons for single-select multiple choice.
+            Each option's value is its index (0, 1, 2, 3).
+            TODO: Support multiple answer types (checkboxes, text input, etc.)
+            -->
+            <div class="answer-options">
+                {% for option in q.options %}
+                <label class="answer-option" data-question="{{ q.id }}">
+                    <input type="radio" name="{{ q.id }}" value="{{ loop.index0 }}" required>
+                    <span class="option-letter">{{ ['A', 'B', 'C', 'D'][loop.index0] }}</span>
+                    <span class="option-text">{{ option }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Navigation Buttons -->
+        <div class="test-navigation">
+            <button type="button" class="btn btn-outline" id="prev-btn" style="display: none;"
+                onclick="navigateQuestion(-1)">
+                ← Previous
+            </button>
+            <button type="button" class="btn btn-primary" id="next-btn" onclick="navigateQuestion(1)">
+                Next →
+            </button>
+            <button type="submit" class="btn btn-primary btn-submit" id="submit-btn" style="display: none;">
+                🤖 Submit & Get AI Analysis
+            </button>
+        </div>
+    </form>
+
+    <!-- 
+    QUESTION MAP
+    Shows a visual overview of all questions with their answered/unanswered status.
+    Lets students jump to specific questions.
+    -->
+    <div class="question-map">
+        <h4>Question Map</h4>
+        <div class="map-dots">
+            {% for q in questions %}
+            <button class="map-dot" id="dot-{{ loop.index }}" onclick="goToQuestion({{ loop.index }})"
+                title="Question {{ loop.index }}: {{ q.topic }}">
+                {{ loop.index }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * TEST NAVIGATION LOGIC
+     * Handles showing one question at a time with prev/next navigation,
+     * updating progress bar, and managing the question map indicators.
+     * 
+     * WHY: Showing one question at a time reduces cognitive load and feels
+     *      more like a professional assessment tool (similar to I-Ready).
+     * 
+     * TODO: Add keyboard shortcuts (arrow keys for navigation)
+     * TODO: Add auto-save functionality so answers aren't lost
+     * TODO: Add a timer countdown for timed tests
+     */
+
+    let currentQuestion = 1;
+    const totalQuestions = {{ questions| length }};
+
+    function navigateQuestion(direction) {
+        // Hide current question
+        document.getElementById(`question-${currentQuestion}`).style.display = 'none';
+
+        // Move to next/prev question
+        currentQuestion += direction;
+
+        // Show new question
+        document.getElementById(`question-${currentQuestion}`).style.display = 'block';
+
+        // Update progress bar
+        const progress = (currentQuestion / totalQuestions) * 100;
+        document.getElementById('test-progress-bar').style.width = `${progress}%`;
+        document.getElementById('progress-text').textContent = `Question ${currentQuestion} of ${totalQuestions}`;
+
+        // Show/hide navigation buttons
+        document.getElementById('prev-btn').style.display = currentQuestion > 1 ? 'inline-flex' : 'none';
+        document.getElementById('next-btn').style.display = currentQuestion < totalQuestions ? 'inline-flex' : 'none';
+        document.getElementById('submit-btn').style.display = currentQuestion === totalQuestions ? 'inline-flex' : 'none';
+
+        // Update question map
+        updateQuestionMap();
+    }
+
+    function goToQuestion(num) {
+        document.getElementById(`question-${currentQuestion}`).style.display = 'none';
+        currentQuestion = num;
+        document.getElementById(`question-${currentQuestion}`).style.display = 'block';
+
+        // Update UI
+        const progress = (currentQuestion / totalQuestions) * 100;
+        document.getElementById('test-progress-bar').style.width = `${progress}%`;
+        document.getElementById('progress-text').textContent = `Question ${currentQuestion} of ${totalQuestions}`;
+
+        document.getElementById('prev-btn').style.display = currentQuestion > 1 ? 'inline-flex' : 'none';
+        document.getElementById('next-btn').style.display = currentQuestion < totalQuestions ? 'inline-flex' : 'none';
+        document.getElementById('submit-btn').style.display = currentQuestion === totalQuestions ? 'inline-flex' : 'none';
+
+        updateQuestionMap();
+    }
+
+    function updateQuestionMap() {
+        // Update the visual question map to show answered/current/unanswered states
+        for (let i = 1; i <= totalQuestions; i++) {
+            const dot = document.getElementById(`dot-${i}`);
+            dot.classList.remove('current', 'answered');
+
+            if (i === currentQuestion) {
+                dot.classList.add('current');
+            }
+
+            // Check if this question has been answered
+            const questionCard = document.getElementById(`question-${i}`);
+            const radios = questionCard.querySelectorAll('input[type="radio"]');
+            const isAnswered = Array.from(radios).some(r => r.checked);
+            if (isAnswered) {
+                dot.classList.add('answered');
+            }
+        }
+    }
+
+    // Visual feedback when an answer is selected
+    // WHY: Immediate feedback makes the test feel responsive
+    document.querySelectorAll('.answer-option').forEach(option => {
+        option.addEventListener('click', function () {
+            // Deselect siblings
+            const parent = this.closest('.answer-options');
+            parent.querySelectorAll('.answer-option').forEach(o => o.classList.remove('selected'));
+            // Select this one
+            this.classList.add('selected');
+            // Update question map
+            updateQuestionMap();
+        });
+    });
+
+    // Initialize question map on load
+    updateQuestionMap();
+</script>
+{% endblock %}

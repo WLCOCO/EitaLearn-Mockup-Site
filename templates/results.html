@@ -1,0 +1,253 @@
+<!--
+=============================================================================
+TEST RESULTS PAGE - AI-Generated Individualized Report
+=============================================================================
+PURPOSE: After submitting a test, students see their detailed results here.
+         This is the "individualized report" that the AI generates:
+         - Overall score and per-topic breakdown
+         - Which questions were correct/incorrect with explanations
+         - AI-identified strengths and weaknesses
+         - Personalized pathway recommendations
+
+WHY: The Student journey says "Not getting specific feedback" is a pain point.
+     This page solves that by providing extremely specific, topic-level feedback
+     with clear next steps for improvement.
+
+MATCHES REQUIREMENTS:
+  - "Produce an individualized report" ✓
+  - "Create a fully personalized curriculum" ✓ (via pathway recommendations)
+  - "Adaptive analysis, Analyze, Identify challenges, mastery, areas for growth" ✓
+  - "Recommend Clear next steps" ✓
+  - "Personalize Customized learning paths" ✓
+
+TODO: Allow students to download/print their report as PDF
+TODO: Email report to parents/guardians
+TODO: Add comparison with previous assessment scores
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}Test Results - {{ subject.name }} - EitaLearn{% endblock %}
+{% block body_class %}student-view results-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Results Header with Overall Score -->
+    <div class="results-header">
+        <a href="{{ url_for('student_dashboard') }}" class="back-link">← Back to Dashboard</a>
+        <h1>{{ subject.icon }} {{ subject.name }} - Assessment Results</h1>
+
+        <div class="results-overview">
+            <!-- Big score circle -->
+            <div
+                class="result-score-circle {% if overall_score >= 75 %}score-good{% elif overall_score >= 50 %}score-ok{% else %}score-low{% endif %}">
+                <span class="score-number">{{ overall_score }}%</span>
+                <span class="score-label">{{ total_correct }}/{{ total_questions }} correct</span>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="result-quick-stats">
+                <div class="quick-stat">
+                    <span class="stat-number">{{ total_correct }}</span>
+                    <span class="stat-label">Correct</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="stat-number">{{ total_questions - total_correct }}</span>
+                    <span class="stat-label">Incorrect</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="stat-number">{{ topic_analysis|length }}</span>
+                    <span class="stat-label">Topics Assessed</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+    AI ANALYSIS SECTION
+    The AI has analyzed the test results and provides a personalized summary.
+    This is the core of the "individualized report."
+    -->
+    <section class="section ai-results-analysis">
+        <div class="ai-badge">🤖 AI Analysis Report</div>
+        <div class="ai-results-box">
+            <h2>Personalized Analysis for {{ student.name }}</h2>
+            <p class="ai-timestamp">Generated on {{ "now"|string }} based on this assessment</p>
+
+            {% if overall_score >= 75 %}
+            <p class="ai-summary-text">
+                Great job! You demonstrated solid understanding across most topics in {{ subject.name }}.
+                The AI has identified a few areas where continued practice will help you reach mastery.
+                Focus on the topics highlighted below to strengthen your skills further.
+            </p>
+            {% elif overall_score >= 50 %}
+            <p class="ai-summary-text">
+                You're making progress in {{ subject.name }}! The AI has identified specific topics where
+                you need additional support. A personalized learning pathway has been created to help you
+                strengthen these areas. Follow the recommended steps below.
+            </p>
+            {% else %}
+            <p class="ai-summary-text">
+                The AI has identified significant gaps in {{ subject.name }} that need attention.
+                Don't worry — a step-by-step personalized pathway has been created to help you build
+                from the foundations. Each topic below has specific recommendations tailored to your needs.
+            </p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- 
+    TOPIC-BY-TOPIC ANALYSIS
+    Shows performance broken down by topic with mastery levels and recommendations.
+    This is the SPECIFIC feedback students need — not just "you got 60%",
+    but "you got 60% in Algebraic Thinking because you struggle with X, so do Y."
+    
+    Sorted by score (lowest first) so the most critical areas are at the top.
+    -->
+    <section class="section">
+        <h2 class="section-title">📊 Topic-by-Topic Breakdown</h2>
+        <p class="section-desc">The AI has analyzed your performance in each topic area and created recommendations.</p>
+
+        <div class="topic-results-list">
+            {% for ta in topic_analysis %}
+            <div class="topic-result-card" style="border-left: 4px solid {{ ta.mastery_color }};">
+                <div class="topic-result-header">
+                    <div>
+                        <h3>{{ ta.topic }}</h3>
+                        <span class="mastery-badge"
+                            style="background-color: {{ ta.mastery_color }}20; color: {{ ta.mastery_color }};">
+                            {{ ta.mastery_label }}
+                        </span>
+                    </div>
+                    <div class="topic-result-score">
+                        <span class="score-big" style="color: {{ ta.mastery_color }};">{{ ta.score }}%</span>
+                        <span class="score-detail">{{ ta.correct }}/{{ ta.total }} correct</span>
+                    </div>
+                </div>
+
+                <div class="score-bar-container">
+                    <div class="score-bar">
+                        <div class="score-bar-fill"
+                            style="width: {{ ta.score }}%; background-color: {{ ta.mastery_color }};"></div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation -->
+                <div class="topic-recommendation">
+                    <strong>{{ ta.recommendation.message }}</strong>
+                    <p>{{ ta.recommendation.detail }}</p>
+                    <div class="rec-actions">
+                        <h4>What the AI recommends:</h4>
+                        <ol>
+                            {% for action in ta.recommendation.actions %}
+                            <li>{{ action }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </div>
+
+                {% if ta.score < 75 %} <a
+                    href="{{ url_for('student_pathway', subject_key=subject_key, topic=ta.topic) }}"
+                    class="btn btn-primary btn-sm">🛤️ Start Personalized Pathway</a>
+                    {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 
+    QUESTION-BY-QUESTION REVIEW
+    Shows each question, what the student answered, what was correct,
+    and an explanation of the concept. This gives students the specific
+    feedback they need to learn from their mistakes.
+    
+    WHY: "Not getting specific feedback on what you got wrong" is a pain point.
+    -->
+    <section class="section">
+        <h2 class="section-title">📝 Question-by-Question Review</h2>
+        <p class="section-desc">Review each question to understand what the AI analyzed about your responses.</p>
+
+        <div class="question-review-list">
+            {% for r in results %}
+            <div class="review-card {% if r.is_correct %}review-correct{% else %}review-incorrect{% endif %}">
+                <div class="review-header">
+                    <span class="review-status">
+                        {% if r.is_correct %}✅ Correct{% else %}❌ Incorrect{% endif %}
+                    </span>
+                    <span class="review-topic">{{ r.topic }}</span>
+                    <span class="question-difficulty difficulty-{{ r.difficulty }}">{{ r.difficulty|title }}</span>
+                </div>
+
+                <p class="review-question">{{ r.question }}</p>
+
+                <div class="review-answers">
+                    {% for opt in r.options %}
+                    <div class="review-option 
+                        {% if loop.index0 == r.correct_answer %}correct-answer{% endif %}
+                        {% if loop.index0 == r.student_answer and not r.is_correct %}wrong-answer{% endif %}">
+                        <span class="option-letter">{{ ['A', 'B', 'C', 'D'][loop.index0] }}</span>
+                        {{ opt }}
+                        {% if loop.index0 == r.correct_answer %}
+                        <span class="answer-label">✓ Correct Answer</span>
+                        {% endif %}
+                        {% if loop.index0 == r.student_answer and not r.is_correct %}
+                        <span class="answer-label wrong-label">✗ Your Answer</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- 
+                AI EXPLANATION
+                This is what the AI would analyze about the student's response.
+                In production, this would be a dynamic, personalized explanation.
+                -->
+                <div class="review-explanation">
+                    <strong>🤖 AI Explanation:</strong>
+                    <p>{{ r.explanation }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 
+    RECOMMENDED PATHWAYS
+    Based on the test results, the AI creates new learning pathways.
+    These are the "customized learning paths" that address weaknesses.
+    -->
+    {% if new_pathways %}
+    <section class="section">
+        <h2 class="section-title">🛤️ AI-Generated Learning Pathways</h2>
+        <p class="section-desc">Based on your results, the AI has created these personalized pathways to help you
+            improve.</p>
+
+        <div class="pathway-list">
+            {% for pw in new_pathways %}
+            <div class="pathway-card pathway-{{ pw.priority }}">
+                <div class="pathway-info">
+                    <span class="pathway-priority">{{ '🔴 High Priority' if pw.priority == 'high' else '🟡 Medium
+                        Priority' }}</span>
+                    <h4>{{ pw.topic }}</h4>
+                    <p class="pathway-meta">{{ pw.mastery }}</p>
+                </div>
+                <a href="{{ url_for('student_pathway', subject_key=subject_key, topic=pw.topic) }}"
+                    class="btn btn-primary btn-sm">Start Pathway →</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="results-actions">
+        <a href="{{ url_for('student_test', subject_key=subject_key) }}" class="btn btn-outline">
+            🔄 Retake Assessment
+        </a>
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-primary">
+            📊 Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

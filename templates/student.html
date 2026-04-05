@@ -1,0 +1,194 @@
+<!--
+=============================================================================
+STUDENT DASHBOARD - Main hub for student users
+=============================================================================
+PURPOSE: The primary landing page for students after login. Shows an overview
+         of all subjects, highlights areas needing improvement, and provides
+         access to assessments and learning pathways.
+
+DESIGN PHILOSOPHY:
+  - Subjects needing the most work appear FIRST (sorted by score, lowest first)
+  - Color-coded mastery indicators make it instantly clear where to focus
+  - Active pathways are prominently displayed to encourage continued learning
+  - Progress trends show students their improvement over time
+
+TODO: Add daily/weekly goals and streaks for gamification
+TODO: Add leaderboard (opt-in) for motivation
+TODO: Add notification center for new pathway assignments
+=============================================================================
+-->
+{% extends "index.html" %}
+
+{% block title %}Student Dashboard - EitaLearn{% endblock %}
+{% block body_class %}student-view{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Welcome Header with Overall Score -->
+    <div class="dashboard-header">
+        <div class="welcome-section">
+            <h1>Welcome back, {{ student.name.split()[0] }}! 👋</h1>
+            <p class="subtitle">Here's your learning overview. Focus on the areas highlighted below.</p>
+        </div>
+        <div class="overall-score-card">
+            <div
+                class="score-circle {% if student.overall_score >= 75 %}score-good{% elif student.overall_score >= 50 %}score-ok{% else %}score-low{% endif %}">
+                <span class="score-number">{{ student.overall_score }}</span>
+                <span class="score-label">Overall</span>
+            </div>
+            <span class="score-grade">{{ student.grade }}</span>
+        </div>
+    </div>
+
+    <!-- 
+    SUBJECT CARDS SECTION
+    Shows all subjects with scores and mastery indicators.
+    Sorted by score (lowest first) so students see what needs work first.
+    WHY: The Student journey map says "Shows the subjects that need the most improvement on"
+    -->
+    <section class="section">
+        <h2 class="section-title">📊 Your Subjects</h2>
+        <p class="section-desc">Click on any subject to see detailed feedback and recommendations from the AI.</p>
+
+        <div class="subject-cards">
+            <!-- 
+            Loop through subjects, sorted by overall score (ascending).
+            This ensures struggling subjects appear first.
+            -->
+            {% for subj_key, subj_data in student.subjects.items()|sort(attribute='1.overall') %}
+            <div class="subject-card"
+                onclick="window.location.href='{{ url_for('student_subject_detail', subject_key=subj_key) }}'">
+                <div class="subject-card-header"
+                    style="background-color: {{ subjects[subj_key].color }}20; border-left: 4px solid {{ subjects[subj_key].color }};">
+                    <span class="subject-icon">{{ subjects[subj_key].icon }}</span>
+                    <h3>{{ subjects[subj_key].name }}</h3>
+                </div>
+
+                <div class="subject-card-body">
+                    <!-- Overall Score Bar -->
+                    <div class="score-bar-container">
+                        <div class="score-bar">
+                            <div class="score-bar-fill"
+                                style="width: {{ subj_data.overall }}%; background-color: {{ subjects[subj_key].color }};">
+                            </div>
+                        </div>
+                        <span class="score-value">{{ subj_data.overall }}%</span>
+                    </div>
+
+                    <!-- Topic Mini-Summary: show weakest topics -->
+                    <div class="topic-summary">
+                        {% for topic, tdata in subj_data.topics.items()|sort(attribute='1.score') %}
+                        {% if loop.index <= 3 %} <div class="topic-mini">
+                            <span class="topic-name">{{ topic }}</span>
+                            <span class="mastery-dot"
+                                style="background-color: {{ get_mastery_label(tdata.mastery)[1] }};"
+                                title="{{ get_mastery_label(tdata.mastery)[0] }}"></span>
+                            <span class="topic-score">{{ tdata.score }}%</span>
+                            {% if tdata.trend == 'up' %}
+                            <span class="trend-icon trend-up">↑</span>
+                            {% elif tdata.trend == 'down' %}
+                            <span class="trend-icon trend-down">↓</span>
+                            {% else %}
+                            <span class="trend-icon trend-flat">→</span>
+                            {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Action buttons -->
+                <div class="card-actions">
+                    <a href="{{ url_for('student_subject_detail', subject_key=subj_key) }}"
+                        class="btn btn-sm btn-outline">View Details</a>
+                    <a href="{{ url_for('student_test', subject_key=subj_key) }}" class="btn btn-sm btn-primary">Take
+                        Test</a>
+                </div>
+            </div>
+
+            <!-- Needs attention flag for low-scoring subjects -->
+            {% if subj_data.overall < 60 %} <div class="attention-flag">⚠️ Needs Focus
+        </div>
+        {% endif %}
+</div>
+{% endfor %}
+</div>
+</section>
+
+<!-- 
+    ACTIVE PATHWAYS SECTION
+    Shows the student's currently assigned learning pathways.
+    These are personalized paths the AI (or teacher) has created.
+    WHY: Students need to see their "next steps" prominently.
+    -->
+<section class="section">
+    <h2 class="section-title">🛤️ Your Learning Pathways</h2>
+    <p class="section-desc">These personalized pathways are designed to help you improve in specific areas.</p>
+
+    {% if student.pathways %}
+    <div class="pathway-list">
+        {% for pathway in student.pathways %}
+        <div class="pathway-card">
+            <div class="pathway-info">
+                <span class="pathway-subject-icon">{{ subjects[pathway.subject].icon }}</span>
+                <div>
+                    <h4>{{ pathway.topic }}</h4>
+                    <p class="pathway-meta">
+                        {{ subjects[pathway.subject].name }} ·
+                        Assigned by: {{ pathway.assigned_by }} ·
+                        Status: <span class="status-{{ pathway.status }}">{{ pathway.status|replace('_', ' ')|title
+                            }}</span>
+                    </p>
+                </div>
+            </div>
+            <div class="pathway-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ pathway.progress }}%;"></div>
+                </div>
+                <span class="progress-text">{{ pathway.progress }}%</span>
+            </div>
+            <a href="{{ url_for('student_pathway', subject_key=pathway.subject, topic=pathway.topic) }}"
+                class="btn btn-sm btn-primary">Continue</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">🎯</span>
+        <p>No active pathways yet. Take a diagnostic test to get personalized recommendations!</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- 
+    MASTERY LEGEND
+    Explains the color-coded mastery system to students 
+    WHY: Students need to understand what the colors/levels mean
+    -->
+<section class="section mastery-legend">
+    <h2 class="section-title">📖 Understanding Your Scores</h2>
+    <div class="legend-items">
+        <div class="legend-item">
+            <span class="legend-dot" style="background-color: #007BFF;"></span>
+            <strong>Advanced (90%+)</strong> — Exceeding grade-level expectations
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background-color: #28A745;"></span>
+            <strong>Proficient (75-89%)</strong> — Meeting grade-level expectations
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background-color: #FFC107;"></span>
+            <strong>Approaching (60-74%)</strong> — Getting close, needs practice
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background-color: #FD7E14;"></span>
+            <strong>Below (40-59%)</strong> — Needs targeted support
+        </div>
+        <div class="legend-item">
+            <span class="legend-dot" style="background-color: #DC3545;"></span>
+            <strong>Well Below (&lt;40%)</strong> — Needs immediate intervention
+        </div>
+    </div>
+</section>
+</div>
+{% endblock %}
