@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EitaLearn - Personalized Learning Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 700px;
+            text-align: center;
+        }
+
+        .hero-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            text-align: left;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+        }
+
+        .feature span {
+            font-size: 0.95rem;
+            color: #cbd5e0;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-box h2 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            color: #63b3ed;
+        }
+
+        .info-box p {
+            font-size: 0.95rem;
+            color: #a0aec0;
+            line-height: 1.6;
+        }
+
+        .info-box code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #fbd38d;
+        }
+
+        .steps {
+            text-align: left;
+            margin-top: 1rem;
+        }
+
+        .steps li {
+            color: #cbd5e0;
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .creds {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .cred-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+
+        .cred-card .role {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .cred-card .detail {
+            font-size: 0.8rem;
+            color: #a0aec0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(99, 179, 237, 0.15);
+            color: #63b3ed;
+            border: 1px solid rgba(99, 179, 237, 0.3);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+        }
+
+        .repo-link {
+            color: #63b3ed;
+            text-decoration: none;
+        }
+
+        .repo-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+
+            .features,
+            .creds {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="hero-icon">🎓</div>
+        <h1>EitaLearn</h1>
+        <p class="tagline">Personalized Learning for Every Student</p>
+
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">📊</span>
+                <span>Adaptive Diagnostic Assessments</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🤖</span>
+                <span>AI-Powered Learning Analysis</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📚</span>
+                <span>Personalized Learning Pathways</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📈</span>
+                <span>Real-Time Progress Tracking</span>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>🖥️ How to Run This App</h2>
+            <p>EitaLearn is a Flask (Python) web application. GitHub Pages only hosts static files, so to run the full
+                interactive app locally:</p>
+            <ol class="steps">
+                <li>Clone the repo: <code>git clone https://github.com/WLCOCO/EitaLearn-Mockup-Site.git</code></li>
+                <li>Install Flask: <code>pip install flask</code></li>
+                <li>Run the server: <code>python index.py</code></li>
+                <li>Open <code>http://127.0.0.1:5000</code> in your browser</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <h2>🔑 Demo Login Credentials</h2>
+            <div class="creds">
+                <div class="cred-card">
+                    <div class="role">🎒 Student</div>
+                    <div class="detail">student1 / pass123</div>
+                </div>
+                <div class="cred-card">
+                    <div class="role">👩‍🏫 Teacher</div>
+                    <div class="detail">teacher1 / teach123</div>
+                </div>
+                <div class="cred-card">
+                    <div class="role">🏫 Admin</div>
+                    <div class="detail">admin1 / admin123</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="badge">Mock Prototype · Flask + Jinja2 + Chart.js</p>
+        <br>
+        <p style="margin-top: 1rem; font-size: 0.85rem; color: #718096;">
+            View source on <a href="https://github.com/WLCOCO/EitaLearn-Mockup-Site" class="repo-link">GitHub</a>
+        </p>
+    </div>
+</body>
+
+</html>
