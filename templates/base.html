@@ -1,0 +1,90 @@
+<!--
+=============================================================================
+BASE TEMPLATE - Shared layout for all pages
+=============================================================================
+PURPOSE: Provides the common HTML structure, navigation bar, and includes
+         for CSS/JS that every page needs. All other templates extend this.
+
+HOW IT WORKS: Uses Jinja2 template inheritance. Child templates fill in
+              the block sections (title, content, extra_js).
+
+TODO: Add responsive hamburger menu for mobile
+TODO: Add notification bell icon for alerts
+TODO: Add user avatar/profile dropdown
+=============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EitaLearn{% endblock %}</title>
+
+    <!-- Main stylesheet for the entire application -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Chart.js CDN for rendering charts on dashboards -->
+    <!-- TODO: Consider hosting locally for production/offline use -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Google Font for clean, modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+
+    <!-- 
+    NAVIGATION BAR
+    Shows different nav items based on user role.
+    The nav adapts: admin sees admin links, teachers see teacher links, etc.
+    TODO: Add breadcrumb navigation for deeper pages
+    -->
+    {% if session.get('user') %}
+    <nav class="main-nav">
+        <div class="nav-container">
+            <!-- Logo/Brand -->
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">🎓</span>
+                <span class="brand-text">EitaLearn</span>
+            </a>
+
+            <!-- Navigation Links (role-specific) -->
+            <div class="nav-links">
+                {% if session.user.role == 'student' %}
+                <a href="{{ url_for('student_dashboard') }}" class="nav-link">Dashboard</a>
+                {% elif session.user.role == 'teacher' %}
+                <a href="{{ url_for('teacher_dashboard') }}" class="nav-link">Dashboard</a>
+                {% elif session.user.role == 'admin' %}
+                <a href="{{ url_for('admin_dashboard') }}" class="nav-link">Dashboard</a>
+                {% endif %}
+            </div>
+
+            <!-- User Info & Logout -->
+            <div class="nav-user">
+                <span class="user-role-badge {{ session.user.role }}">{{ session.user.role|title }}</span>
+                <span class="user-name">{{ session.user.name }}</span>
+                <a href="{{ url_for('logout') }}" class="nav-link logout-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Main Content Area - Filled by child templates -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <p>EitaLearn © 2026 — Personalized Learning for Every Student | <em>Mock Prototype</em></p>
+    </footer>
+
+    <!-- Main JavaScript file -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Page-specific JavaScript (injected by child templates) -->
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

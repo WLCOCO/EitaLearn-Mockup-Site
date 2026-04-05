@@ -1,0 +1,542 @@
+<!--
+=============================================================================
+ADMIN DASHBOARD - School-Wide Statistics and Comparisons
+=============================================================================
+PURPOSE: The admin dashboard is designed to SELL the platform to decision makers.
+         It shows convincing data through three main tabs:
+         1. OVERALL VIEW — School-wide metrics, engagement, performance tiers
+         2. AREAS FOR IMPROVEMENT — AI-identified areas needing attention
+         3. FEEDBACK — Student/teacher feedback with AI-analyzed themes
+
+KEY DATA POINTS FOR ADMINS:
+  - Before/After comparisons (proves ROI of the platform)
+  - School-to-school comparisons (competitive positioning)
+  - Subject-to-subject trends (identifies curriculum gaps)
+  - Engagement metrics (proves adoption)
+  - AI-generated improvement recommendations (actionable next steps)
+
+MATCHES ADMIN JOURNEY:
+  - "Before and after" ✓
+  - "Subject to subject" ✓
+  - "School to school" ✓
+  - "Areas for improvement" ✓
+  - "Clarify messages to feedback" ✓ (3 tabs: overview, improvements, feedback)
+  - "App recommends what admin can do to make scores better" ✓
+  - "AI figures out common themes between feedback" ✓
+
+TODO: Add date range filters for all data
+TODO: Add PDF export for board presentations
+TODO: Add drill-down from school-level to class-level to student-level
+TODO: Add ROI calculator (cost savings from improved outcomes)
+=============================================================================
+-->
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - EitaLearn{% endblock %}
+{% block body_class %}admin-view{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Admin Header -->
+    <div class="dashboard-header admin-header">
+        <div class="welcome-section">
+            <h1>Admin Dashboard 🏫</h1>
+            <p class="subtitle">School-wide analytics, comparisons, and AI-driven insights</p>
+        </div>
+        <div class="admin-quick-stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ comparison.engagement.active_students }}</span>
+                <span class="stat-label">Active Students</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ avg_overall }}%</span>
+                <span class="stat-label">Avg Score</span>
+            </div>
+            <div class="stat-card stat-positive">
+                <span class="stat-number">{{ comparison.engagement.improvement_rate }}</span>
+                <span class="stat-label">Improving</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ comparison.engagement.pathways_completed }}</span>
+                <span class="stat-label">Pathways Done</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+    TAB NAVIGATION
+    Three tabs matching the admin's need for:
+    1. Overall view of school performance
+    2. Areas that need improvement
+    3. Feedback from users with AI analysis
+    -->
+    <div class="admin-tabs">
+        <button class="tab-btn active" onclick="showTab('overview')">📊 Overall View</button>
+        <button class="tab-btn" onclick="showTab('improvements')">🎯 Areas for Improvement</button>
+        <button class="tab-btn" onclick="showTab('feedback')">💬 Feedback</button>
+    </div>
+
+    <!-- ================================================================
+         TAB 1: OVERALL VIEW
+         Shows the big picture — is the platform working? Are scores up?
+         ================================================================ -->
+    <div class="tab-content" id="tab-overview">
+
+        <!-- BEFORE / AFTER COMPARISON -->
+        <!-- WHY: This is THE most important metric for admins. Shows ROI. -->
+        <section class="section">
+            <h2 class="section-title">📈 Before & After Implementation</h2>
+            <p class="section-desc">Comparison of average scores before and after using EitaLearn.</p>
+
+            <div class="comparison-cards">
+                {% for subj_key, data in comparison.before_after.items() %}
+                <div class="comparison-card">
+                    <div class="comparison-header">
+                        <span class="comp-icon">{{ subjects[subj_key].icon }}</span>
+                        <h3>{{ subjects[subj_key].name }}</h3>
+                    </div>
+                    <div class="comparison-bars">
+                        <div class="comp-bar-row">
+                            <span class="comp-label">Before</span>
+                            <div class="comp-bar">
+                                <div class="comp-bar-fill before" style="width: {{ data.before }}%;"></div>
+                            </div>
+                            <span class="comp-value">{{ data.before }}%</span>
+                        </div>
+                        <div class="comp-bar-row">
+                            <span class="comp-label">After</span>
+                            <div class="comp-bar">
+                                <div class="comp-bar-fill after" style="width: {{ data.after }}%;"></div>
+                            </div>
+                            <span class="comp-value">{{ data.after }}%</span>
+                        </div>
+                    </div>
+                    <div class="comparison-change positive">
+                        {{ data.change }} improvement
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- SCHOOL-TO-SCHOOL COMPARISON -->
+        <!-- WHY: Shows how our school compares to others, especially those NOT using the platform -->
+        <section class="section">
+            <h2 class="section-title">🏫 School-to-School Comparison</h2>
+            <p class="section-desc">See how schools using EitaLearn compare to those that don't.</p>
+
+            <div class="school-comparison-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>School</th>
+                            <th>📐 Math</th>
+                            <th>📖 Reading</th>
+                            <th>🔬 Science</th>
+                            <th>EitaLearn?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for school in comparison.school_comparison %}
+                        <tr class="{% if school.uses_platform %}platform-user{% endif %}">
+                            <td>
+                                <strong>{{ school.school }}</strong>
+                                {% if school.uses_platform %}
+                                <span class="platform-badge">✅ EitaLearn</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="table-score">{{ school.math }}%</span></td>
+                            <td><span class="table-score">{{ school.reading }}%</span></td>
+                            <td><span class="table-score">{{ school.science }}%</span></td>
+                            <td>{{ '✅ Yes' if school.uses_platform else '❌ No' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="table-note">
+                    <strong>Key insight:</strong> Schools using EitaLearn average
+                    <strong>{{ ((67+71+64)/3)|round|int }}%</strong> across subjects vs
+                    <strong>{{ ((60+63+57+55+58+52)/6)|round|int }}%</strong> for non-users —
+                    a significant difference.
+                </p>
+            </div>
+        </section>
+
+        <!-- SCORE TREND CHART -->
+        <!-- WHY: Shows improvement trajectory over time — proves sustained impact -->
+        <section class="section">
+            <h2 class="section-title">📊 Score Trends Over Time</h2>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </section>
+
+        <!-- ENGAGEMENT METRICS -->
+        <!-- WHY: Proves the platform is actually being used (adoption metrics) -->
+        <section class="section">
+            <h2 class="section-title">🎯 Engagement Metrics</h2>
+            <div class="engagement-grid">
+                <div class="engagement-card">
+                    <span class="eng-number">{{ comparison.engagement.active_students }}/{{
+                        comparison.engagement.total_students }}</span>
+                    <span class="eng-label">Active Students</span>
+                    <span class="eng-percent">{{ ((comparison.engagement.active_students /
+                        comparison.engagement.total_students) * 100)|round|int }}% adoption</span>
+                </div>
+                <div class="engagement-card">
+                    <span class="eng-number">{{ comparison.engagement.avg_time_per_week }}</span>
+                    <span class="eng-label">Avg Time/Week</span>
+                    <span class="eng-percent">per student</span>
+                </div>
+                <div class="engagement-card">
+                    <span class="eng-number">{{ comparison.engagement.pathways_completed }}</span>
+                    <span class="eng-label">Pathways Completed</span>
+                    <span class="eng-percent">this semester</span>
+                </div>
+                <div class="engagement-card">
+                    <span class="eng-number">{{ comparison.engagement.assessments_taken }}</span>
+                    <span class="eng-label">Assessments Taken</span>
+                    <span class="eng-percent">total</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- PERFORMANCE DISTRIBUTION -->
+        <section class="section">
+            <h2 class="section-title">📊 Student Performance Distribution</h2>
+            <div class="chart-container chart-small">
+                <canvas id="distributionChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <!-- ================================================================
+         TAB 2: AREAS FOR IMPROVEMENT
+         AI-identified areas that need attention across the school
+         ================================================================ -->
+    <div class="tab-content" id="tab-improvements" style="display:none;">
+
+        <section class="section">
+            <h2 class="section-title">🤖 AI-Identified Improvement Areas</h2>
+            <p class="section-desc">The AI has analyzed school-wide performance data and identified these priority
+                areas.</p>
+
+            <div class="ai-badge">🤖 AI-Generated Recommendations</div>
+
+            <!-- Subject-by-Subject Improvement Recommendations -->
+            {% for subj_key, avg in subject_avgs.items() %}
+            <div class="improvement-card">
+                <div class="imp-header" style="border-left: 4px solid {{ subjects[subj_key].color }};">
+                    <div>
+                        <h3>{{ subjects[subj_key].icon }} {{ subjects[subj_key].name }}</h3>
+                        <span class="imp-score" style="color: {{ subjects[subj_key].color }};">School Average: {{ avg
+                            }}%</span>
+                    </div>
+                </div>
+
+                <div class="imp-body">
+                    {% if avg < 60 %} <div class="imp-alert imp-critical">
+                        <strong>⚠️ Critical:</strong> School-wide performance in {{ subjects[subj_key].name }} is below
+                        60%.
+                        Immediate intervention recommended.
+                </div>
+                <div class="ai-recommendation-box">
+                    <h4>🤖 What the AI Recommends for Admins:</h4>
+                    <ol>
+                        <li>Review current {{ subjects[subj_key].name }} curriculum alignment with standards</li>
+                        <li>Increase dedicated {{ subjects[subj_key].name }} instruction time by 15-20 minutes/day</li>
+                        <li>Implement mandatory personalized pathways for all students scoring below 50%</li>
+                        <li>Provide professional development for teachers on {{ subjects[subj_key].name }} pedagogy</li>
+                        <li>Consider co-teaching or small group interventions for lowest-performing students</li>
+                    </ol>
+                </div>
+                {% elif avg < 75 %} <div class="imp-alert imp-moderate">
+                    <strong>📊 Moderate:</strong> Performance is approaching grade level but has room for growth.
+            </div>
+            <div class="ai-recommendation-box">
+                <h4>🤖 What the AI Recommends for Admins:</h4>
+                <ol>
+                    <li>Focus personalized pathways on students in the "approaching" tier to push them to proficiency
+                    </li>
+                    <li>Investigate specific topics within {{ subjects[subj_key].name }} where scores are lowest</li>
+                    <li>Encourage teachers to use pathway data to differentiate instruction</li>
+                    <li>Set a school-wide goal to increase average to 75% by end of semester</li>
+                </ol>
+            </div>
+            {% else %}
+            <div class="imp-alert imp-good">
+                <strong>✅ Strong:</strong> School-wide performance in {{ subjects[subj_key].name }} is solid.
+            </div>
+            <div class="ai-recommendation-box">
+                <h4>🤖 What the AI Recommends:</h4>
+                <ol>
+                    <li>Maintain current instructional strategies</li>
+                    <li>Focus on moving "proficient" students to "advanced"</li>
+                    <li>Implement enrichment pathways for high-performing students</li>
+                    <li>Document successful practices for sharing across subjects</li>
+                </ol>
+            </div>
+            {% endif %}
+    </div>
+</div>
+{% endfor %}
+</section>
+
+<!-- Cost-Benefit / Value Proposition -->
+<section class="section">
+    <h2 class="section-title">💰 Return on Investment</h2>
+    <p class="section-desc">Data showing the value EitaLearn provides to your school.</p>
+
+    <div class="roi-grid">
+        <div class="roi-card">
+            <h3>Score Improvement</h3>
+            <span class="roi-number positive">+15.5%</span>
+            <p>Average improvement across all subjects since implementation</p>
+        </div>
+        <div class="roi-card">
+            <h3>Teacher Time Saved</h3>
+            <span class="roi-number positive">~5 hrs/week</span>
+            <p>Automated grading, report generation, and pathway creation</p>
+        </div>
+        <div class="roi-card">
+            <h3>Student Engagement</h3>
+            <span class="roi-number positive">94%</span>
+            <p>Of students actively using the platform each week</p>
+        </div>
+        <div class="roi-card">
+            <h3>Intervention Speed</h3>
+            <span class="roi-number positive">3x faster</span>
+            <p>Time to identify and support struggling students</p>
+        </div>
+    </div>
+</section>
+</div>
+
+<!-- ================================================================
+         TAB 3: FEEDBACK
+         Student and teacher feedback with AI-analyzed themes
+         ================================================================ -->
+<div class="tab-content" id="tab-feedback" style="display:none;">
+
+    <!-- AI-ANALYZED THEMES -->
+    <!-- WHY: Admin journey says "AI figures out common themes between feedback
+             given and creates solutions for the administrator to do" -->
+    <section class="section">
+        <h2 class="section-title">🤖 AI-Analyzed Feedback Themes</h2>
+        <p class="section-desc">The AI has analyzed all feedback and identified these common themes, along with
+            recommended actions.</p>
+
+        <div class="theme-list">
+            {% for theme in feedback.ai_themes %}
+            <div class="theme-card theme-{{ theme.sentiment }}">
+                <div class="theme-header">
+                    <h3>
+                        {% if theme.sentiment == 'positive' %}✅
+                        {% elif theme.sentiment == 'negative' %}⚠️
+                        {% else %}💭{% endif %}
+                        {{ theme.theme }}
+                    </h3>
+                    <span class="theme-count">{{ theme.count }} mentions</span>
+                    <span class="theme-sentiment {{ theme.sentiment }}">{{ theme.sentiment|title }}</span>
+                </div>
+                <p>{{ theme.summary }}</p>
+
+                {% if theme.sentiment == 'negative' %}
+                <div class="ai-recommendation-box">
+                    <h4>🤖 AI-Suggested Actions:</h4>
+                    {% if 'Difficulty' in theme.theme %}
+                    <ol>
+                        <li>Review adaptive difficulty algorithm settings</li>
+                        <li>Add more granular difficulty levels between current tiers</li>
+                        <li>Allow teachers to manually adjust difficulty ranges for their students</li>
+                        <li>Implement real-time difficulty adjustment based on response patterns</li>
+                    </ol>
+                    {% elif 'Variety' in theme.theme %}
+                    <ol>
+                        <li>Invest in developing interactive exercise types (drag-and-drop, simulations)</li>
+                        <li>Add video-based learning content alongside text</li>
+                        <li>Incorporate game-like elements in practice exercises</li>
+                        <li>Survey students on preferred activity types</li>
+                    </ol>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- STUDENT FEEDBACK -->
+    <section class="section">
+        <h2 class="section-title">🎒 Student Feedback</h2>
+
+        <div class="feedback-list">
+            {% for fb in feedback.student_feedback %}
+            <div class="feedback-card">
+                <div class="feedback-header">
+                    <div class="feedback-rating">
+                        {% for i in range(5) %}
+                        <span class="star {% if i < fb.rating %}filled{% endif %}">★</span>
+                        {% endfor %}
+                    </div>
+                    <span class="feedback-subject">{{ fb.subject|title }}</span>
+                    <span class="feedback-date">{{ fb.date }}</span>
+                </div>
+                <p class="feedback-text">"{{ fb.text }}"</p>
+                <span class="feedback-author">— {{ fb.student }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- TEACHER FEEDBACK -->
+    <section class="section">
+        <h2 class="section-title">👩‍🏫 Teacher Feedback</h2>
+
+        <div class="feedback-list">
+            {% for fb in feedback.teacher_feedback %}
+            <div class="feedback-card">
+                <div class="feedback-header">
+                    <div class="feedback-rating">
+                        {% for i in range(5) %}
+                        <span class="star {% if i < fb.rating %}filled{% endif %}">★</span>
+                        {% endfor %}
+                    </div>
+                    <span class="feedback-date">{{ fb.date }}</span>
+                </div>
+                <p class="feedback-text">"{{ fb.text }}"</p>
+                <span class="feedback-author">— {{ fb.teacher }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- FEEDBACK SUMMARY STATS -->
+    <section class="section">
+        <h2 class="section-title">📊 Feedback Statistics</h2>
+        <div class="chart-container chart-small">
+            <canvas id="feedbackChart"></canvas>
+        </div>
+    </section>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * TAB SWITCHING
+     * Handles the three admin tabs: Overview, Improvements, Feedback
+     * WHY: Organizes information into digestible sections instead of
+     * one overwhelming page.
+     */
+    function showTab(tabName) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        // Show selected tab
+        document.getElementById(`tab-${tabName}`).style.display = 'block';
+        event.target.classList.add('active');
+    }
+
+    /**
+     * SCORE TREND CHART
+     * Line chart showing monthly score trends across subjects.
+     * WHY: Admins need to see the trajectory — are scores going up?
+     */
+    const trendData = {{ comparison.subject_trends| tojson }};
+    const subjectColors = {{ subject_colors| tojson }};
+    const subjectNames = {{ subject_names| tojson }};
+
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: trendData.months,
+            datasets: Object.keys(subjectColors).map(key => ({
+                label: subjectNames[key],
+                data: trendData[key],
+                borderColor: subjectColors[key],
+                backgroundColor: subjectColors[key] + '20',
+                tension: 0.3,
+                fill: true
+            }))
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'School-Wide Score Trends (Monthly Averages)' }
+            },
+            scales: {
+                y: { min: 40, max: 80, title: { display: true, text: 'Average Score (%)' } }
+            }
+        }
+    });
+
+    /**
+     * PERFORMANCE DISTRIBUTION PIE CHART
+     * Shows what percentage of students fall into each mastery tier.
+     * WHY: Admins need to see the overall distribution to understand
+     * how many students need intervention vs. enrichment.
+     */
+    const tiers = {{ performance_tiers| tojson }};
+
+    new Chart(document.getElementById('distributionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Advanced (90%+)', 'Proficient (75-89%)', 'Approaching (60-74%)', 'Below (40-59%)', 'Well Below (<40%)'],
+            datasets: [{
+                data: [tiers.advanced, tiers.proficient, tiers.approaching, tiers.below, tiers.well_below],
+                backgroundColor: ['#007BFF', '#28A745', '#FFC107', '#FD7E14', '#DC3545'],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Student Performance Distribution' },
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    /**
+     * FEEDBACK SENTIMENT CHART
+     * Shows the distribution of feedback sentiments.
+     */
+    const themes = {{ feedback.ai_themes| tojson }};
+
+    new Chart(document.getElementById('feedbackChart'), {
+        type: 'bar',
+        data: {
+            labels: themes.map(t => t.theme),
+            datasets: [{
+                label: 'Mentions',
+                data: themes.map(t => t.count),
+                backgroundColor: themes.map(t => {
+                    if (t.sentiment === 'positive') return '#28A74580';
+                    if (t.sentiment === 'negative') return '#DC354580';
+                    return '#FFC10780';
+                }),
+                borderColor: themes.map(t => {
+                    if (t.sentiment === 'positive') return '#28A745';
+                    if (t.sentiment === 'negative') return '#DC3545';
+                    return '#FFC107';
+                }),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                title: { display: true, text: 'Feedback Theme Frequency' },
+                legend: { display: false }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Number of Mentions' } }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+<!--
+=============================================================================
+LOGIN PAGE - Role-based authentication
+=============================================================================
+PURPOSE: Entry point for all users. They select their role (Student, Teacher,
+         Admin) and enter credentials to access their role-specific dashboard.
+
+WHY: The role selector is important because each role gets a completely
+     different dashboard experience. This also prevents confusion — a teacher
+     can't accidentally log into the student view.
+
+TODO: Add "Forgot Password" functionality
+TODO: Add school/district selector for multi-school deployments
+TODO: Add SSO (Single Sign-On) integration for school Google/Microsoft accounts
+=============================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EitaLearn - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="login-page">
+
+    <div class="login-container">
+        <!-- Left side: Branding and feature highlights -->
+        <div class="login-hero">
+            <div class="hero-content">
+                <div class="hero-icon">🎓</div>
+                <h1>EitaLearn</h1>
+                <p class="hero-tagline">Personalized Learning for Every Student</p>
+
+                <div class="hero-features">
+                    <div class="hero-feature">
+                        <span class="feature-icon">📊</span>
+                        <span>Adaptive Diagnostic Assessments</span>
+                    </div>
+                    <div class="hero-feature">
+                        <span class="feature-icon">🤖</span>
+                        <span>AI-Powered Learning Analysis</span>
+                    </div>
+                    <div class="hero-feature">
+                        <span class="feature-icon">📚</span>
+                        <span>Personalized Learning Pathways</span>
+                    </div>
+                    <div class="hero-feature">
+                        <span class="feature-icon">📈</span>
+                        <span>Real-Time Progress Tracking</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side: Login form -->
+        <div class="login-form-container">
+            <div class="login-form-inner">
+                <h2>Welcome Back</h2>
+                <p class="login-subtitle">Select your role and sign in to continue</p>
+
+                <!-- Error message display (shows when login fails) -->
+                {% if error %}
+                <div class="alert alert-error">
+                    <span class="alert-icon">⚠️</span>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('login') }}" class="login-form">
+
+                    <!-- 
+                    ROLE SELECTOR
+                    Three clickable cards that set the hidden 'role' field.
+                    JavaScript handles the visual selection toggle.
+                    WHY: Visual role selection is more intuitive than a dropdown
+                    -->
+                    <div class="role-selector">
+                        <label class="role-option" data-role="student">
+                            <input type="radio" name="role" value="student" required>
+                            <div class="role-card">
+                                <span class="role-icon">🎒</span>
+                                <span class="role-label">Student</span>
+                            </div>
+                        </label>
+
+                        <label class="role-option" data-role="teacher">
+                            <input type="radio" name="role" value="teacher">
+                            <div class="role-card">
+                                <span class="role-icon">👩‍🏫</span>
+                                <span class="role-label">Teacher</span>
+                            </div>
+                        </label>
+
+                        <label class="role-option" data-role="admin">
+                            <input type="radio" name="role" value="admin">
+                            <div class="role-card">
+                                <span class="role-icon">🏫</span>
+                                <span class="role-label">Admin</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Username and Password fields -->
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required placeholder="Enter your username"
+                            autocomplete="username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="Enter your password"
+                            autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+                </form>
+
+                <!-- 
+                DEMO CREDENTIALS
+                Visible on the login page for easy testing.
+                TODO: Remove this section in production!
+                -->
+                <div class="demo-credentials">
+                    <h4>Demo Credentials</h4>
+                    <div class="cred-list">
+                        <div class="cred-item">
+                            <strong>Students:</strong> student1 / pass123 <em>(also student2-5)</em>
+                        </div>
+                        <div class="cred-item">
+                            <strong>Teachers:</strong> teacher1 / teach123 <em>(also teacher2)</em>
+                        </div>
+                        <div class="cred-item">
+                            <strong>Admin:</strong> admin1 / admin123
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimal JS for role card selection visual feedback -->
+    <script>
+        // When a role card is clicked, highlight it and deselect others
+        // WHY: Visual feedback makes it clear which role is selected
+        document.querySelectorAll('.role-option').forEach(option => {
+            option.addEventListener('click', function () {
+                document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+    </script>
+</body>
+
+</html>

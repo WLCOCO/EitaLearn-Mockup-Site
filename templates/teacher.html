@@ -1,0 +1,314 @@
+<!--
+=============================================================================
+TEACHER DASHBOARD - Class and Student Management
+=============================================================================
+PURPOSE: The teacher's main view showing:
+  1. Flagged students who need immediate attention (falling grades)
+  2. Class-wide performance overview
+  3. Individual student cards with quick stats
+  4. Ability to assign/manage learning pathways
+
+DESIGN DECISIONS:
+  - FLAGGED STUDENTS appear FIRST at the top — the most urgent info
+  - Color-coded student cards make it easy to spot who needs help
+  - One-click access to full student profiles
+  - Quick pathway assignment right from the dashboard
+
+MATCHES TEACHER JOURNEY:
+  - "Flags students/classes with falling grades" ✓
+  - "Teachers choose which data want to see, shows important stats" ✓
+  - "Sees recommended student pathways and assigns" ✓
+  - "Teachers able to track pathway, see where students are at" ✓
+
+TODO: Add filtering/sorting options (by subject, score, trend)
+TODO: Add bulk actions (assign pathway to multiple students)
+TODO: Add export feature for parent report cards
+TODO: Add real-time alerts when student scores drop significantly
+=============================================================================
+-->
+{% extends "base.html" %}
+
+{% block title %}Teacher Dashboard - EitaLearn{% endblock %}
+{% block body_class %}teacher-view{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="welcome-section">
+            <h1>Welcome, {{ teacher.name }} 👩‍🏫</h1>
+            <p class="subtitle">Monitor student progress, identify those needing help, and manage learning pathways.</p>
+        </div>
+        <div class="class-stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ all_students|length }}</span>
+                <span class="stat-label">Total Students</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ class_avg }}%</span>
+                <span class="stat-label">Class Average</span>
+            </div>
+            <div class="stat-card stat-alert">
+                <span class="stat-number">{{ flagged_students|length }}</span>
+                <span class="stat-label">Need Intervention</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+    FLAGGED STUDENTS — URGENT SECTION
+    These students have overall scores below 60% and need intervention.
+    WHY: Teacher journey says "Flags students/classes with falling grades"
+    This is the FIRST thing teachers see so they can take immediate action.
+    -->
+    {% if flagged_students %}
+    <section class="section flagged-section">
+        <h2 class="section-title">🚨 Students Requiring Intervention</h2>
+        <p class="section-desc">These students are scoring below 60% overall and may need additional support.</p>
+
+        <div class="flagged-list">
+            {% for s in flagged_students %}
+            <div class="flagged-card"
+                onclick="window.location.href='{{ url_for('teacher_student_detail', student_id=s.id) }}'">
+                <div class="flagged-info">
+                    <h3>{{ s.name }}</h3>
+                    <p>{{ s.class_name }} · {{ s.grade }}</p>
+                </div>
+                <div class="flagged-score score-low">
+                    {{ s.overall_score }}%
+                </div>
+                <div class="flagged-subjects">
+                    {% for subj_key, subj_data in s.subjects.items() %}
+                    {% if subj_data.overall < 60 %} <span class="flagged-subject-tag"
+                        style="background-color: {{ subjects[subj_key].color }}20; color: {{ subjects[subj_key].color }};">
+                        {{ subjects[subj_key].icon }} {{ subj_data.overall }}%
+                        </span>
+                        {% endif %}
+                        {% endfor %}
+                </div>
+                <div class="flagged-actions">
+                    <a href="{{ url_for('teacher_student_detail', student_id=s.id) }}" class="btn btn-sm btn-primary">
+                        View Profile →
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 
+    ALL STUDENTS OVERVIEW
+    Cards for every student showing their performance at a glance.
+    Teachers can click into any student for full details.
+    -->
+    <section class="section">
+        <h2 class="section-title">👥 All Students</h2>
+        <p class="section-desc">Click on any student to see their full performance profile, AI analysis, and manage
+            pathways.</p>
+
+        <div class="student-grid">
+            {% for s in all_students|sort(attribute='overall_score') %}
+            <div class="student-card {% if s.overall_score < 60 %}student-at-risk{% elif s.overall_score >= 85 %}student-excelling{% endif %}"
+                onclick="window.location.href='{{ url_for('teacher_student_detail', student_id=s.id) }}'">
+
+                <!-- Student Identity -->
+                <div class="student-card-header">
+                    <div class="student-avatar">{{ s.name[0] }}</div>
+                    <div>
+                        <h3>{{ s.name }}</h3>
+                        <p class="student-meta">{{ s.grade }}</p>
+                    </div>
+                    <div
+                        class="student-overall {% if s.overall_score >= 75 %}score-good{% elif s.overall_score >= 50 %}score-ok{% else %}score-low{% endif %}">
+                        {{ s.overall_score }}%
+                    </div>
+                </div>
+
+                <!-- Subject Scores -->
+                <div class="student-subjects-mini">
+                    {% for subj_key, subj_data in s.subjects.items() %}
+                    <div class="mini-subject">
+                        <span class="mini-icon">{{ subjects[subj_key].icon }}</span>
+                        <div class="mini-bar">
+                            <div class="mini-bar-fill"
+                                style="width: {{ subj_data.overall }}%; background-color: {{ subjects[subj_key].color }};">
+                            </div>
+                        </div>
+                        <span class="mini-score">{{ subj_data.overall }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Active Pathways Count -->
+                <div class="student-pathways-mini">
+                    {% if s.pathways %}
+                    <span class="pathway-count">🛤️ {{ s.pathways|length }} active pathway{{ 's' if s.pathways|length >
+                        1 }}</span>
+                    {% else %}
+                    <span class="no-pathways">No active pathways</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 
+    CLASS PERFORMANCE CHART
+    Visual overview of class-wide performance by subject.
+    WHY: Teachers need to see patterns across their entire class, not just
+    individual students. A struggling class may indicate a teaching gap.
+    -->
+    <section class="section">
+        <h2 class="section-title">📊 Class Performance Overview</h2>
+        <div class="chart-container">
+            <canvas id="classChart"></canvas>
+        </div>
+    </section>
+</div>
+
+<!-- 
+ASSIGN PATHWAY MODAL
+Lets teachers assign a new pathway to a student without leaving the dashboard.
+-->
+<div class="modal-overlay" id="assign-modal" style="display:none;">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeAssignModal()">×</button>
+        <h2>Assign Learning Pathway</h2>
+        <form id="assign-form">
+            <div class="form-group">
+                <label>Student</label>
+                <select id="assign-student" class="form-select">
+                    {% for s in all_students %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <select id="assign-subject" class="form-select">
+                    {% for key, subj in subjects.items() %}
+                    <option value="{{ key }}">{{ subj.icon }} {{ subj.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Topic</label>
+                <select id="assign-topic" class="form-select">
+                    <!-- Populated dynamically based on subject selection -->
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Assign Pathway</button>
+        </form>
+        <div id="assign-result" style="display:none;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * CLASS PERFORMANCE CHART
+     * Renders a bar chart showing per-subject averages across all students.
+     * Uses Chart.js library loaded in the base template.
+     * 
+     * WHY: Visual representation helps teachers quickly identify
+     * class-wide trends and subjects needing more instructional focus.
+     */
+
+    // Collect student data for the chart
+    const students = {{ all_students| tojson }};
+    const subjectKeys = {{ subjects.keys() | list | tojson }};
+    const subjectLabels = {{ subject_labels| tojson }};
+    const subjectColors = {{ subject_colors| tojson }};
+
+    // Calculate averages per subject
+    const subjectAverages = {};
+    subjectKeys.forEach(key => {
+        const scores = students.map(s => s.subjects[key] ? s.subjects[key].overall : 0);
+        subjectAverages[key] = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    });
+
+    // Create individual student bars grouped by subject
+    const datasets = students.map((student, idx) => ({
+        label: student.name,
+        data: subjectKeys.map(key => student.subjects[key] ? student.subjects[key].overall : 0),
+        backgroundColor: `hsla(${idx * 60}, 70%, 50%, 0.7)`,
+        borderColor: `hsla(${idx * 60}, 70%, 40%, 1)`,
+        borderWidth: 1
+    }));
+
+    new Chart(document.getElementById('classChart'), {
+        type: 'bar',
+        data: {
+            labels: subjectKeys.map(k => subjectLabels[k]),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Student Performance by Subject' }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, title: { display: true, text: 'Score (%)' } }
+            }
+        }
+    });
+
+    /**
+     * TOPIC DROPDOWN — Populate topics based on selected subject
+     */
+    const subjectTopics = {{ subject_topics| tojson }};
+
+    document.getElementById('assign-subject').addEventListener('change', function () {
+        const topicSelect = document.getElementById('assign-topic');
+        topicSelect.innerHTML = '';
+        const topics = subjectTopics[this.value] || [];
+        topics.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            topicSelect.appendChild(opt);
+        });
+    });
+
+    // Initialize topics for default subject
+    document.getElementById('assign-subject').dispatchEvent(new Event('change'));
+
+    /**
+     * ASSIGN PATHWAY FORM SUBMISSION
+     * Sends the pathway assignment to the server via AJAX.
+     */
+    document.getElementById('assign-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const data = {
+            student_id: parseInt(document.getElementById('assign-student').value),
+            subject: document.getElementById('assign-subject').value,
+            topic: document.getElementById('assign-topic').value
+        };
+
+        fetch('/teacher/assign-pathway', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+            .then(res => res.json())
+            .then(result => {
+                const div = document.getElementById('assign-result');
+                div.style.display = 'block';
+                div.innerHTML = `<div class="alert alert-success">✅ ${result.message}<br><em>${result.ai_note}</em></div>`;
+            });
+    });
+
+    function openAssignModal() {
+        document.getElementById('assign-modal').style.display = 'flex';
+    }
+
+    function closeAssignModal() {
+        document.getElementById('assign-modal').style.display = 'none';
+    }
+</script>
+{% endblock %}
